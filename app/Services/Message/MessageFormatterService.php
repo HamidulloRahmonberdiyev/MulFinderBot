@@ -82,13 +82,30 @@ class MessageFormatterService
 
   public function filmListKeyboard(Collection $films): array
   {
-    $buttons = $films->map(fn(Film $film) => [
-      [
-        'text' => "▶️ {$film->title}",
-        'callback_data' => "film_{$film->id}"
-      ]
-    ])->toArray();
+    $buttons = [];
+    $row = [];
 
-    return ['inline_keyboard' => $buttons];
+    $i = 1;
+
+    foreach ($films as $film) {
+
+      $row[] = [
+        'text' => (string)$i,
+        'callback_data' => "film_{$film->id}"
+      ];
+
+      if (count($row) === 5) {
+        $buttons[] = $row;
+        $row = [];
+      }
+
+      $i++;
+    }
+
+    if (!empty($row)) $buttons[] = $row;
+
+    return [
+      'inline_keyboard' => $buttons
+    ];
   }
 }

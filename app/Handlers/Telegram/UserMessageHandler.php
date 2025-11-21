@@ -21,11 +21,6 @@ class UserMessageHandler
       $chatId = $message['chat']['id'];
       $text = $message['text'] ?? '';
 
-      Log::info('💬 Processing user message', [
-        'chat_id' => $chatId,
-        'text' => $text
-      ]);
-
       match ($text) {
         '/start' => $this->handleStart($chatId),
         '🎬 Multfilmlarni Topish' => $this->handleSearchButton($chatId),

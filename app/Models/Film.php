@@ -20,18 +20,12 @@ class Film extends Model
         'updated_at' => 'datetime',
     ];
 
-    /**
-     * Search films by title
-     */
     public function scopeSearchByTitle($query, string $search)
     {
         return $query->where('title', 'like', "%{$search}%")
             ->orderBy('created_at', 'desc');
     }
 
-    /**
-     * Get formatted film details
-     */
     public function getFormattedDetails(): string
     {
         if (empty($this->details)) {
@@ -47,9 +41,6 @@ class Film extends Model
         return implode("\n", $details);
     }
 
-    /**
-     * Get emoji for detail key
-     */
     private function getEmojiForKey(string $key): string
     {
         return match ($key) {
@@ -64,9 +55,6 @@ class Film extends Model
         };
     }
 
-    /**
-     * Get short details for preview
-     */
     public function getShortDetails(): string
     {
         $parts = [];

@@ -33,7 +33,7 @@ class ChannelPostHandler
       $parsed = $this->parser->parse($caption);
 
       if (!$parsed['title']) {
-        Log::error('❌ Failed to extract title');
+        $this->filmService->notifyError("❌ Xatolik! Film BOT ga saqlanmadi. Film nomini olish xatolik\nCaption:\n{$caption}");
         return;
       }
 
@@ -51,6 +51,7 @@ class ChannelPostHandler
 
       $this->filmService->store($filmData);
     } catch (\Exception $e) {
+      $this->filmService->notifyError("❌ Film saqlashda xatolik: {$e->getMessage()}");
       Log::error('❌ Channel post handling failed', [
         'error' => $e->getMessage(),
         'trace' => $e->getTraceAsString()
