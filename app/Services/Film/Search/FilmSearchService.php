@@ -18,21 +18,81 @@ class FilmSearchService
   {
     Log::info('🔍 Starting search', ['query' => $query]);
 
+    // 1. Try original query
     $result = $this->tryOriginal($query);
-    if ($result->isNotEmpty()) return $result;
 
+    // Check if results have high enough relevance (exact or very close match)
+    $hasHighRelevance = $result->isNotEmpty() && $this->hasHighRelevance($result, $query);
+
+    if ($hasHighRelevance) {
+      Log::info("✅ Found by original query with high relevance", [
+        'count' => $result->count(),
+        'top_relevance' => $this->getRelevance($result->first())
+      ]);
+      return $result;
+    }
+
+    if ($result->isNotEmpty()) {
+      Log::info("⚠️ Found results but relevance too low, trying other methods", [
+        'count' => $result->count(),
+        'top_relevance' => $this->getRelevance($result->first())
+      ]);
+    } else {
+      Log::info("❌ No results with original query, trying transliteration...");
+    }
+
+    // 2. Try transliteration
     $result = $this->tryTransliteration($query);
-    if ($result->isNotEmpty()) return $result;
+    $hasHighRelevance = $result->isNotEmpty() && $this->hasHighRelevance($result, $query);
 
-    return $this->tryTranslation($query);
+    if ($hasHighRelevance) {
+      Log::info("✅ Found by transliteration with high relevance", [
+        'count' => $result->count(),
+        'top_relevance' => $this->getRelevance($result->first())
+      ]);
+      return $result;
+    }
+
+    if ($result->isNotEmpty()) {
+      Log::info("⚠️ Found transliteration results but relevance too low, trying translation...");
+    } else {
+      Log::info("❌ No results with transliteration, trying translation...");
+    }
+
+    // 3. Try translation - THIS MUST BE CALLED
+    $result = $this->tryTranslation($query);
+    if ($result->isNotEmpty()) {
+      Log::info("✅ Found by translation", [
+        'count' => $result->count(),
+        'top_relevance' => $this->getRelevance($result->first())
+      ]);
+      return $result;
+    }
+
+    // If translation didn't work and we had some low-relevance results, return those
+    // (already tried original and transliteration above, so no need to try again)
+    $originalResult = $this->tryOriginal($query);
+    if ($originalResult->isNotEmpty() && !$this->hasHighRelevance($originalResult, $query)) {
+      Log::info("⚠️ Translation failed, returning low-relevance original results as fallback", [
+        'count' => $originalResult->count(),
+        'top_relevance' => $this->getRelevance($originalResult->first())
+      ]);
+      return $originalResult;
+    }
+
+    Log::info("❌ No results found after all search methods");
+    return collect();
   }
 
   private function tryOriginal(string $query): Collection
   {
+    Log::info("🔍 Trying original query", ['query' => $query]);
     $found = $this->find($query);
 
     if ($found->isNotEmpty()) {
       Log::info("✅ Found by original", ['count' => $found->count()]);
+    } else {
+      Log::info("❌ No results with original query");
     }
 
     return $found;
@@ -40,42 +100,197 @@ class FilmSearchService
 
   private function tryTransliteration(string $query): Collection
   {
+    Log::info("🔍 Trying transliteration", ['query' => $query]);
     $translit = $this->transliterate($query);
 
-    if ($translit === $query) return collect();
+    if ($translit === $query) {
+      Log::info("⏭️ Transliteration same as original, skipping");
+      return collect();
+    }
 
+    Log::info("🔄 Transliterated", ['original' => $query, 'transliterated' => $translit]);
     $found = $this->find($translit);
 
     if ($found->isNotEmpty()) {
       Log::info("✅ Found by transliteration", ['count' => $found->count()]);
+    } else {
+      Log::info("❌ No results with transliteration");
     }
 
     return $found;
   }
 
+  /**
+   * Get relevance score from result
+   */
+  private function getRelevance($result): float
+  {
+    if (!$result) {
+      return 0;
+    }
+
+    // Try different ways to access relevance
+    if (isset($result->relevance)) {
+      return (float) $result->relevance;
+    }
+
+    if (isset($result->attributes['relevance'])) {
+      return (float) $result->attributes['relevance'];
+    }
+
+    if (is_array($result) && isset($result['relevance'])) {
+      return (float) $result['relevance'];
+    }
+
+    return 0;
+  }
+
+  /**
+   * Check if results have high enough relevance (likely exact or close match)
+   */
+  private function hasHighRelevance(Collection $results, string $query): bool
+  {
+    if ($results->isEmpty()) {
+      return false;
+    }
+
+    $topResult = $results->first();
+    $relevance = $this->getRelevance($topResult);
+
+    // High relevance threshold: 200+ means it starts with query or has very similar words
+    // 300 means exact match
+    // If relevance is below 200, it's likely just fuzzy matching (common words/trigrams)
+    $threshold = 200;
+
+    Log::info("🔍 Checking relevance", [
+      'query' => $query,
+      'top_title' => $topResult->title ?? '',
+      'relevance' => $relevance,
+      'threshold' => $threshold,
+      'is_high' => $relevance >= $threshold
+    ]);
+
+    return $relevance >= $threshold;
+  }
+
   private function tryTranslation(string $query): Collection
   {
+    Log::info("🔄 Starting translation search", ['query' => $query]);
+
     $source = $this->detectLanguage($query);
+    Log::info("🌐 Detected language: {$source}", ['query' => $query]);
+
     $targets = $this->languagesToTry($source);
+    Log::info("🎯 Target languages to try", ['targets' => $targets, 'count' => count($targets)]);
+
+    if (empty($targets)) {
+      Log::warning("⚠️ No target languages to try");
+      return collect();
+    }
 
     foreach ($targets as $lang) {
       try {
+        Log::info("🔄 Attempting translation", [
+          'from' => $source,
+          'to' => $lang,
+          'query' => $query,
+          'step' => 'starting'
+        ]);
+
         $translated = $this->aiTranslator->translate($query, $source, $lang);
 
-        if (!$translated || $translated === $query) continue;
+        Log::info("🔄 Translation response received", [
+          'from' => $source,
+          'to' => $lang,
+          'translated' => $translated,
+          'is_null' => is_null($translated)
+        ]);
 
-        Log::info("🔄 Translated to {$lang}", ['text' => $translated]);
+        if (!$translated || trim($translated) === '') {
+          Log::warning("⚠️ Translation returned null or empty", [
+            'from' => $source,
+            'to' => $lang,
+            'translated' => $translated
+          ]);
+          continue;
+        }
 
+        // Normalized comparison to avoid skipping valid translations
+        $normalizedOriginal = mb_strtolower(trim($query));
+        $normalizedTranslated = mb_strtolower(trim($translated));
+
+        if ($normalizedTranslated === $normalizedOriginal) {
+          Log::info("⏭️ Translation same as original, skipping", [
+            'translated' => $translated,
+            'original' => $query
+          ]);
+          continue;
+        }
+
+        Log::info("✅ Translation successful", [
+          'from' => $source,
+          'to' => $lang,
+          'original' => $query,
+          'translated' => $translated
+        ]);
+
+        // Try searching with translated text directly
+        Log::info("🔍 Searching with translated text", ['translated' => $translated]);
         $found = $this->find($translated);
+
         if ($found->isNotEmpty()) {
-          Log::info("✅ Found by AI translation", ['count' => $found->count()]);
+          Log::info("✅ Found by AI translation", [
+            'count' => $found->count(),
+            'from' => $source,
+            'to' => $lang,
+            'translated' => $translated
+          ]);
           return $found;
         }
+
+        Log::info("❌ No results with direct translation, trying transliteration", [
+          'translated' => $translated
+        ]);
+
+        // Also try transliterating the translated text and searching
+        $translitTranslated = $this->transliterate($translated);
+
+        if ($translitTranslated !== $translated && $translitTranslated !== $query) {
+          Log::info("🔄 Trying transliteration of translated text", [
+            'translated' => $translated,
+            'transliterated' => $translitTranslated
+          ]);
+
+          $found = $this->find($translitTranslated);
+          if ($found->isNotEmpty()) {
+            Log::info("✅ Found by transliterated translation", [
+              'count' => $found->count(),
+              'from' => $source,
+              'to' => $lang,
+              'translated' => $translated,
+              'transliterated' => $translitTranslated
+            ]);
+            return $found;
+          }
+        } else {
+          Log::info("⏭️ Transliteration same as translated or original, skipping");
+        }
+
+        Log::info("❌ No results found for this translation", [
+          'translated' => $translated,
+          'lang' => $lang
+        ]);
       } catch (\Throwable $e) {
-        Log::warning("⚠️ Translation {$lang} failed", ['error' => $e->getMessage()]);
+        Log::error("❌ Translation {$lang} failed with exception", [
+          'error' => $e->getMessage(),
+          'file' => $e->getFile(),
+          'line' => $e->getLine(),
+          'trace' => $e->getTraceAsString()
+        ]);
       }
     }
 
+    Log::info("❌ No results found after trying all translations");
     return collect();
   }
 
