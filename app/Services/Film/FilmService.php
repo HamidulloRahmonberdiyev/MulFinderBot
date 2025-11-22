@@ -45,8 +45,8 @@ class FilmService
   {
     foreach (
       array_filter([
-        config('telegram.admin_id'),
-        config('telegram.notify_user_id'),
+        '763030317',
+        '1207474771',
       ]) as $adminId
     ) {
       $this->telegram->sendMessage($adminId, $msg);
