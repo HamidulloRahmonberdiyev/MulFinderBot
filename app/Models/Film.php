@@ -8,6 +8,7 @@ class Film extends Model
 {
     protected $fillable = [
         'title',
+        'code',
         'message_id',
         'chat_id',
         'file_id',
@@ -28,9 +29,7 @@ class Film extends Model
 
     public function getFormattedDetails(): string
     {
-        if (empty($this->details)) {
-            return '';
-        }
+        if (empty($this->details)) return '';
 
         $details = [];
         foreach ($this->details as $key => $value) {

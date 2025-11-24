@@ -32,9 +32,14 @@ class FilmService
 
   public function search(string $query): Collection
   {
+    if (preg_match('/^C\d+$/', $query)) {
+      return Film::where('code', $query)->get();
+    }
+
     return $this->search->search($query)
       ?: Film::whereRaw('1=0')->get();
   }
+
 
   public function findById(int $id): ?Film
   {
