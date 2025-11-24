@@ -6,6 +6,7 @@ use App\Handlers\Telegram\CallbackQueryHandler;
 use App\Handlers\Telegram\ChannelPostHandler;
 use App\Handlers\Telegram\UserMessageHandler;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\ApiResponseTrait;
 use App\Services\TelegramService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\Log;
 
 class TelegramWebhookController extends Controller
 {
+    use ApiResponseTrait;
+
     public function __construct(
         private readonly ChannelPostHandler $channelPostHandler,
         private readonly UserMessageHandler $userMessageHandler,
@@ -37,17 +40,14 @@ class TelegramWebhookController extends Controller
                 $this->callbackQueryHandler->handle($update['callback_query']);
             }
 
-            return response()->json(['ok' => true]);
+            return $this->successResponse();
         } catch (\Exception $e) {
             Log::error('❌ Webhook processing failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return response()->json([
-                'ok' => false,
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse($e->getMessage(), 500);
         }
     }
 
@@ -61,13 +61,13 @@ class TelegramWebhookController extends Controller
             'channel_post'
         ]);
 
-        return response()->json($result);
+        return $this->successResponse($result);
     }
 
     public function getWebhookInfo(TelegramService $telegram): JsonResponse
     {
         $response = Http::get("https://api.telegram.org/bot{$telegram->token}/getWebhookInfo");
 
-        return response()->json($response->json());
+        return $this->successResponse($response->json());
     }
 }

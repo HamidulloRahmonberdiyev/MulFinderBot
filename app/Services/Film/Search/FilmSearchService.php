@@ -18,10 +18,8 @@ class FilmSearchService
   {
     Log::info('🔍 Starting search', ['query' => $query]);
 
-    // 1. Try original query
     $result = $this->tryOriginal($query);
 
-    // Check if results have high enough relevance (exact or very close match)
     $hasHighRelevance = $result->isNotEmpty() && $this->hasHighRelevance($result, $query);
 
     if ($hasHighRelevance) {
@@ -41,7 +39,6 @@ class FilmSearchService
       Log::info("❌ No results with original query, trying transliteration...");
     }
 
-    // 2. Try transliteration
     $result = $this->tryTransliteration($query);
     $hasHighRelevance = $result->isNotEmpty() && $this->hasHighRelevance($result, $query);
 
@@ -59,7 +56,6 @@ class FilmSearchService
       Log::info("❌ No results with transliteration, trying translation...");
     }
 
-    // 3. Try translation - THIS MUST BE CALLED
     $result = $this->tryTranslation($query);
     if ($result->isNotEmpty()) {
       Log::info("✅ Found by translation", [
@@ -69,8 +65,6 @@ class FilmSearchService
       return $result;
     }
 
-    // If translation didn't work and we had some low-relevance results, return those
-    // (already tried original and transliteration above, so no need to try again)
     $originalResult = $this->tryOriginal($query);
     if ($originalResult->isNotEmpty() && !$this->hasHighRelevance($originalResult, $query)) {
       Log::info("⚠️ Translation failed, returning low-relevance original results as fallback", [
@@ -81,7 +75,7 @@ class FilmSearchService
     }
 
     Log::info("❌ No results found after all search methods");
-    return collect();
+    return new Collection();
   }
 
   private function tryOriginal(string $query): Collection
@@ -105,7 +99,7 @@ class FilmSearchService
 
     if ($translit === $query) {
       Log::info("⏭️ Transliteration same as original, skipping");
-      return collect();
+      return new Collection();
     }
 
     Log::info("🔄 Transliterated", ['original' => $query, 'transliterated' => $translit]);
@@ -185,7 +179,7 @@ class FilmSearchService
 
     if (empty($targets)) {
       Log::warning("⚠️ No target languages to try");
-      return collect();
+      return new Collection();
     }
 
     foreach ($targets as $lang) {
@@ -291,12 +285,9 @@ class FilmSearchService
     }
 
     Log::info("❌ No results found after trying all translations");
-    return collect();
+    return new Collection();
   }
 
-  /**
-   * Database fuzzy search
-   */
   private function find(string $title): Collection
   {
     $normalized = normalize_text($title);
@@ -323,17 +314,14 @@ class FilmSearchService
 
   private function detectLanguage(string $text): string
   {
-    // Russian (Cyrillic)
     if (preg_match('/[А-Яа-яЁёЎўҚқҒғҲҳ]/u', $text)) {
       return 'ru';
     }
 
-    // English (har bir harf A–Z + max 1-2 so'z)
     if (preg_match('/[A-Za-z]/', $text) && !preg_match('/[İğıöüşç]/ui', $text)) {
       return 'en';
     }
 
-    // Uzbek Latin
     return 'uz';
   }
 
