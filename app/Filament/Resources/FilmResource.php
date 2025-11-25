@@ -104,51 +104,61 @@ class FilmResource extends Resource
 
                 Tables\Columns\TextColumn::make('details')
                     ->label('Tafsilotlar')
-                    ->wrap()
-                    ->formatStateUsing(function (Film $record) {
+                    ->getStateUsing(function (Film $record) {
                         if (!$record->details) {
-                            return '<span class="text-gray-400 italic">Tafsilotlar yo\'q</span>';
+                            return '';
                         }
 
                         $details = is_string($record->details)
                             ? json_decode($record->details, true)
                             : $record->details;
 
-                        if (empty($details)) {
-                            return '<span class="text-gray-400 italic">Tafsilotlar yo\'q</span>';
+                        if (empty($details) || !is_array($details)) {
+                            return '';
                         }
 
-                        $items = collect($details)->take(3)->map(function ($value, $key) {
-                            return '<span class="inline-flex items-center gap-1">
-                        <span class="font-semibold text-gray-700">' . ucfirst($key) . ':</span>
-                        <span class="text-gray-600">' . (is_array($value) ? count($value) . ' ta' : Str::limit($value, 30)) . '</span>
-                    </span>';
-                        })->join('<span class="mx-1 text-gray-300">•</span>');
+                        $lines = [];
+                        $count = 0;
 
-                        return '<div class="space-y-1">' . $items . '</div>';
+                        foreach ($details as $key => $value) {
+                            if ($count >= 3) break;
+
+                            $displayValue = is_array($value)
+                                ? implode(', ', array_slice($value, 0, 2)) . (count($value) > 2 ? '...' : '')
+                                : Str::limit($value, 40);
+
+                            $lines[] = ucfirst($key) . ': ' . $displayValue;
+                            $count++;
+                        }
+
+                        $remaining = count($details) - 3;
+                        if ($remaining > 0) {
+                            $lines[] = '(+' . $remaining . ' ta)';
+                        }
+
+                        return implode(' • ', $lines);
                     })
+                    ->wrap()
                     ->tooltip(function (Film $record) {
-                        if (!$record->details) {
-                            return null;
-                        }
+                        if (!$record->details) return null;
 
                         $details = is_string($record->details)
                             ? json_decode($record->details, true)
                             : $record->details;
 
-                        if (empty($details)) {
-                            return null;
-                        }
+                        if (empty($details) || !is_array($details)) return null;
 
-                        return collect($details)->map(function ($value, $key) {
+                        $tooltipLines = [];
+                        foreach ($details as $key => $value) {
                             $formattedValue = is_array($value)
                                 ? implode(', ', $value)
                                 : $value;
 
-                            return ucfirst($key) . ': ' . $formattedValue;
-                        })->join("\n");
-                    })
-                    ->html(),
+                            $tooltipLines[] = ucfirst($key) . ': ' . $formattedValue;
+                        }
+
+                        return implode("\n", $tooltipLines);
+                    }),
 
                 Tables\Columns\TextColumn::make('message_id')
                     ->label('Message ID')
