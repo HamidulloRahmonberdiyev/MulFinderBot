@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Story extends Model
@@ -12,11 +11,14 @@ class Story extends Model
         'title',
         'content',
         'image',
-        'views_count'
+        'url',
+        'views_count',
+        'likes',
     ];
 
     protected $casts = [
         'views_count' => 'integer',
+        'likes' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -40,22 +42,4 @@ class Story extends Model
         return $disk->url($this->image);
     }
 
-    public function views(): HasMany
-    {
-        return $this->hasMany(StoryView::class);
-    }
-
-    public function incrementViewsCount(): bool
-    {
-        try {
-            $this->increment('views_count');
-            return true;
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to increment views count', [
-                'story_id' => $this->id,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
 }

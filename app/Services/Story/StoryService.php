@@ -4,38 +4,24 @@ namespace App\Services\Story;
 
 use App\DTO\StoryData;
 use App\Models\Story;
-use App\Models\StoryView;
-use Illuminate\Support\Facades\DB;
-
 class StoryService
 {
-    public function incrementViewsCount(int $storyId, string $ipAddress): bool
+    public function incrementViewsCount(int $storyId): bool
     {
         try {
-            $story = Story::findOrFail($storyId);
-
-            return DB::transaction(function () use ($story, $storyId, $ipAddress) {
-                $existingView = StoryView::where('story_id', $storyId)
-                    ->where('ip_address', $ipAddress)
-                    ->first();
-
-                if ($existingView) return true;
-
-                StoryView::create([
-                    'story_id' => $storyId,
-                    'ip_address' => $ipAddress,
-                ]);
-
-                $story->increment('views_count');
-
-                return true;
-            });
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            $updated = Story::whereKey($storyId)->increment('views_count');
+            return $updated > 0;
+        } catch (\Throwable $e) {
             return false;
-        } catch (\Illuminate\Database\QueryException $e) {
-            if ($e->getCode() === '23000') return true;
-            return false;
-        } catch (\Exception $e) {
+        }
+    }
+
+    public function incrementLikesCount(int $storyId): bool
+    {
+        try {
+            $updated = Story::whereKey($storyId)->increment('likes');
+            return $updated > 0;
+        } catch (\Throwable $e) {
             return false;
         }
     }
@@ -43,8 +29,7 @@ class StoryService
     public function getLatestStories(int $limit = 10): array
     {
         $stories = Story::query()
-            ->withCount('views')
-            ->orderBy('created_at', 'desc')
+            ->orderByDesc('created_at')
             ->limit($limit)
             ->get();
 
@@ -55,7 +40,7 @@ class StoryService
 
     public function findById(int $id): ?StoryData
     {
-        $story = Story::withCount('views')->find($id);
+        $story = Story::find($id);
 
         if (!$story) {
             return null;

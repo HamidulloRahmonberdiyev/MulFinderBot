@@ -54,6 +54,12 @@ class StoryResource extends Resource
                             ->rows(5)
                             ->columnSpanFull(),
 
+                        Forms\Components\TextInput::make('url')
+                            ->label('URL')
+                            ->url()
+                            ->maxLength(255)
+                            ->columnSpanFull(),
+
                         Forms\Components\FileUpload::make('image')
                             ->label('Rasm')
                             ->image()
@@ -71,7 +77,6 @@ class StoryResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn(Builder $query) => $query->withCount('views'))
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->label('Rasm')
@@ -103,6 +108,17 @@ class StoryResource extends Resource
                         default => 'gray',
                     }),
 
+                Tables\Columns\TextColumn::make('likes')
+                    ->label('Like lar')
+                    ->numeric()
+                    ->sortable()
+                    ->badge()
+                    ->color(fn(int $state): string => match (true) {
+                        $state >= 100 => 'success',
+                        $state >= 50 => 'warning',
+                        default => 'gray',
+                    }),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Yaratilgan')
                     ->dateTime('d.m.Y H:i')
@@ -124,10 +140,12 @@ class StoryResource extends Resource
                         'low' => '0-49',
                     ])
                     ->query(function (Builder $query, array $data): Builder {
-                        return match ($data['value']) {
-                            'high' => $query->has('views', '>=', 100),
-                            'medium' => $query->has('views', '>=', 50)->has('views', '<', 100),
-                            'low' => $query->has('views', '<', 50),
+                        $value = $data['value'] ?? null;
+
+                        return match ($value) {
+                            'high' => $query->where('views_count', '>=', 100),
+                            'medium' => $query->whereBetween('views_count', [50, 99]),
+                            'low' => $query->where('views_count', '<', 50),
                             default => $query,
                         };
                     }),

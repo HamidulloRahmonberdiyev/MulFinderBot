@@ -14,4 +14,5 @@ Route::prefix('stories')->name('stories.')->group(function () {
     Route::get('/', [StoryController::class, 'index'])->name('index');
     Route::get('/{id}', [StoryController::class, 'show'])->name('show');
     Route::post('/increment-views', [StoryController::class, 'incrementViews'])->name('increment-views');
+    Route::post('/increment-likes', [StoryController::class, 'incrementLikes'])->name('increment-likes');
 });

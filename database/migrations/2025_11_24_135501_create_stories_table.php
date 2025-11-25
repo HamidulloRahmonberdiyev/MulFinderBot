@@ -16,7 +16,9 @@ return new class extends Migration
             $table->string('title');
             $table->text('content')->nullable();
             $table->string('image');
-            $table->integer('views_count')->nullable();
+            $table->string('url')->nullable();
+            $table->unsignedBigInteger('views_count')->default(0);
+            $table->unsignedBigInteger('likes')->default(0);
             $table->timestamps();
         });
     }

@@ -42,23 +42,12 @@ class FilmService
 
   private function generateNextCode(): string
   {
-    $films = Film::whereNotNull('code')
+    $maxNumber = Film::whereNotNull('code')
       ->where('code', 'like', 'C%')
-      ->pluck('code')
-      ->toArray();
+      ->selectRaw('MAX(CAST(SUBSTRING(code, 2) AS UNSIGNED)) as max_code')
+      ->value('max_code');
 
-    $maxNumber = 102;
-
-    foreach ($films as $code) {
-      if (preg_match('/^C(\d+)$/', $code, $matches)) {
-        $number = (int) $matches[1];
-        $maxNumber = max($maxNumber, $number);
-      }
-    }
-
-    $nextNumber = max($maxNumber + 1, 103);
-
-    return 'C' . $nextNumber;
+    return 'C' . $maxNumber + 1;
   }
 
   public function search(string $query): Collection

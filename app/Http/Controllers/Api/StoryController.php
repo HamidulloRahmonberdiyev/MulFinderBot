@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Story\StoryMetricRequest;
 use App\Services\Story\StoryService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class StoryController extends Controller
 {
@@ -32,21 +31,11 @@ class StoryController extends Controller
         }
     }
 
-    public function incrementViews(Request $request): JsonResponse
+    public function incrementViews(StoryMetricRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'story_id' => 'required|integer|exists:stories,id',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->errorResponse('Validation failed', 422, $validator->errors());
-        }
-
         try {
-            $storyId = (int) $request->input('story_id');
-            $ipAddress = $this->getClientIpAddress($request);
-
-            $success = $this->storyService->incrementViewsCount($storyId, $ipAddress);
+            $storyId = (int) $request->validated('story_id');
+            $success = $this->storyService->incrementViewsCount($storyId);
 
             if (!$success) {
                 return $this->errorResponse('Failed to increment views count', 500);
@@ -56,6 +45,26 @@ class StoryController extends Controller
         } catch (\Exception $e) {
             return $this->errorResponse(
                 'Failed to increment views count',
+                500,
+                config('app.debug') ? ['error' => $e->getMessage()] : null
+            );
+        }
+    }
+
+    public function incrementLikes(StoryMetricRequest $request): JsonResponse
+    {
+        try {
+            $storyId = (int) $request->validated('story_id');
+            $success = $this->storyService->incrementLikesCount($storyId);
+
+            if (!$success) {
+                return $this->errorResponse('Failed to increment likes count', 500);
+            }
+
+            return $this->successResponse(null, 'Likes count incremented successfully');
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                'Failed to increment likes count',
                 500,
                 config('app.debug') ? ['error' => $e->getMessage()] : null
             );
@@ -79,23 +88,5 @@ class StoryController extends Controller
                 config('app.debug') ? ['error' => $e->getMessage()] : null
             );
         }
-    }
-
-    private function getClientIpAddress(Request $request): string
-    {
-        $ipAddress = $request->ip();
-
-        $forwardedFor = $request->header('X-Forwarded-For');
-        if ($forwardedFor) {
-            $ips = explode(',', $forwardedFor);
-            $ipAddress = trim($ips[0]);
-        }
-
-        $realIp = $request->header('X-Real-IP');
-        if ($realIp) {
-            $ipAddress = trim($realIp);
-        }
-
-        return $ipAddress ?: '0.0.0.0';
     }
 }
