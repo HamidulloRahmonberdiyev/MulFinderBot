@@ -101,7 +101,7 @@ class CallbackQueryHandler
     $this->telegram->sendChatAction($chatId, 'upload_video');
 
     sleep(1);
-    $this->telegram->forwardMessage($chatId, $film->chat_id, $film->message_id);
+    $this->telegram->copyMessage($chatId, $film->chat_id, $film->message_id);
 
     Log::info('✅ Film sent from callback', [
       'film_id' => $film->id,
