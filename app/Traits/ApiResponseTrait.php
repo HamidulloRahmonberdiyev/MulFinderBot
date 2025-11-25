@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Concerns;
+namespace App\Traits;
 
 use Illuminate\Http\JsonResponse;
 
@@ -16,14 +16,16 @@ trait ApiResponseTrait
      */
     protected function successResponse(mixed $data = null, ?string $message = null, int $status = 200): JsonResponse
     {
-        $response = ['ok' => true];
+        $response = [
+            'success' => true,
+        ];
 
         if ($message !== null) {
             $response['message'] = $message;
         }
 
         if ($data !== null) {
-            $response = array_merge($response, is_array($data) ? $data : ['data' => $data]);
+            $response['data'] = $data;
         }
 
         return response()->json($response, $status);
@@ -40,12 +42,16 @@ trait ApiResponseTrait
     protected function errorResponse(string $message, int $status = 500, mixed $errors = null): JsonResponse
     {
         $response = [
-            'ok' => false,
-            'error' => $message
+            'success' => false,
+            'message' => $message,
         ];
 
         if ($errors !== null) {
             $response['errors'] = $errors;
+        }
+
+        if (config('app.debug')) {
+            $response['error'] = $message;
         }
 
         return response()->json($response, $status);
