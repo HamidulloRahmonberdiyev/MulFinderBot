@@ -17,6 +17,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 
 class FilmResource extends Resource
 {
@@ -105,21 +106,49 @@ class FilmResource extends Resource
                     ->label('Tafsilotlar')
                     ->wrap()
                     ->formatStateUsing(function (Film $record) {
-                        if (empty($record->details)) {
-                            return new HtmlString('<span class="text-gray-400">Tafsilotlar yo\'q</span>');
+                        if (!$record->details) {
+                            return '<span class="text-gray-400 italic">Tafsilotlar yo\'q</span>';
                         }
 
-                        $shortDetails = $record->getShortDetails();
-                        return new HtmlString($shortDetails ?: '<span class="text-gray-400">-</span>');
+                        $details = is_string($record->details)
+                            ? json_decode($record->details, true)
+                            : $record->details;
+
+                        if (empty($details)) {
+                            return '<span class="text-gray-400 italic">Tafsilotlar yo\'q</span>';
+                        }
+
+                        $items = collect($details)->take(3)->map(function ($value, $key) {
+                            return '<span class="inline-flex items-center gap-1">
+                        <span class="font-semibold text-gray-700">' . ucfirst($key) . ':</span>
+                        <span class="text-gray-600">' . (is_array($value) ? count($value) . ' ta' : Str::limit($value, 30)) . '</span>
+                    </span>';
+                        })->join('<span class="mx-1 text-gray-300">•</span>');
+
+                        return '<div class="space-y-1">' . $items . '</div>';
                     })
-                    ->html()
-                    ->limit(50)
                     ->tooltip(function (Film $record) {
-                        if (empty($record->details)) {
+                        if (!$record->details) {
                             return null;
                         }
-                        return $record->getFormattedDetails();
-                    }),
+
+                        $details = is_string($record->details)
+                            ? json_decode($record->details, true)
+                            : $record->details;
+
+                        if (empty($details)) {
+                            return null;
+                        }
+
+                        return collect($details)->map(function ($value, $key) {
+                            $formattedValue = is_array($value)
+                                ? implode(', ', $value)
+                                : $value;
+
+                            return ucfirst($key) . ': ' . $formattedValue;
+                        })->join("\n");
+                    })
+                    ->html(),
 
                 Tables\Columns\TextColumn::make('message_id')
                     ->label('Message ID')
