@@ -119,11 +119,8 @@ class FilmSearchService
    */
   private function getRelevance($result): float
   {
-    if (!$result) {
-      return 0;
-    }
+    if (!$result) return 0;
 
-    // Try different ways to access relevance
     if (isset($result->relevance)) {
       return (float) $result->relevance;
     }
@@ -144,16 +141,11 @@ class FilmSearchService
    */
   private function hasHighRelevance(Collection $results, string $query): bool
   {
-    if ($results->isEmpty()) {
-      return false;
-    }
+    if ($results->isEmpty())  return false;
 
     $topResult = $results->first();
     $relevance = $this->getRelevance($topResult);
 
-    // High relevance threshold: 200+ means it starts with query or has very similar words
-    // 300 means exact match
-    // If relevance is below 200, it's likely just fuzzy matching (common words/trigrams)
     $threshold = 200;
 
     Log::info("🔍 Checking relevance", [
@@ -308,7 +300,7 @@ class FilmSearchService
       ->having('relevance', '>', 0)
       ->orderByDesc('relevance')
       ->orderByDesc('created_at')
-      ->limit(20)
+      ->limit(10)
       ->get();
   }
 
