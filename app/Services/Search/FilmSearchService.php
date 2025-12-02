@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 
 class FilmSearchService
 {
-  public function searchFilms(?string $searchQuery, int $limit = 20): Collection
+  public function searchFilms(?string $searchQuery, int $limit = 10): Collection
   {
     if (empty($searchQuery) || trim($searchQuery) === '') {
       return Film::query()
@@ -20,10 +20,19 @@ class FilmSearchService
     $normalizedQuery = mb_strtolower($searchQuery);
 
     return Film::query()
-      ->where(function ($q) use ($searchTerm, $normalizedQuery) {
+      ->where(function ($q) use ($searchTerm, $normalizedQuery, $searchQuery) {
         $q->where('title', 'LIKE', $searchTerm)
           ->orWhere('code', 'LIKE', $searchTerm)
-          ->orWhereRaw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(details, "$.*"))) LIKE ?', ["%{$normalizedQuery}%"]);
+          ->orWhereRaw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(details, "$.*"))) LIKE ?', ["%{$normalizedQuery}%"])
+
+          ->orWhereRaw('
+            CHAR_LENGTH(title) - CHAR_LENGTH(REPLACE(LOWER(title), ?, "")) >= ? 
+            AND ABS(CHAR_LENGTH(title) - CHAR_LENGTH(?)) <= 3
+          ', [
+            mb_substr($normalizedQuery, 0, 1),
+            max(1, mb_strlen($normalizedQuery) - 2),
+            $searchQuery
+          ]);
       })
       ->orderByRaw('
                 CASE 
