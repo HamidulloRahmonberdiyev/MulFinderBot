@@ -31,9 +31,9 @@ class StatsOverviewWidget extends BaseWidget
                 ->descriptionIcon('heroicon-o-calendar')
                 ->color('warning'),
 
-            Stat::make('Bugungi yuklab olinishlar', $todayStories)
-                ->description('Bugungi yuklab olingan multfilmlar soni')
-                ->descriptionIcon('heroicon-o-arrow-down-tray')
+            Stat::make('Bugungi joylangan istoriyalar', $todayStories)
+                ->description('Bugun qo\'shilgan istoriyalar soni')
+                ->descriptionIcon('heroicon-o-calendar-days')
                 ->color('danger'),
         ];
     }
