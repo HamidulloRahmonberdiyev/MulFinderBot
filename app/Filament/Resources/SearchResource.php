@@ -99,8 +99,7 @@ class SearchResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Vaqt')
                     ->dateTime('d.m.Y H:i')
-                    ->sortable()
-                    ->defaultSort('created_at', 'desc'),
+                    ->sortable(),
             ])
             ->filters([
                 Tables\Filters\Filter::make('has_results')

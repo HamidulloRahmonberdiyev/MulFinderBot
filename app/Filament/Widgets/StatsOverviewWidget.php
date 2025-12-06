@@ -26,14 +26,14 @@ class StatsOverviewWidget extends BaseWidget
                 ->descriptionIcon('heroicon-o-book-open')
                 ->color('info'),
 
-            Stat::make('Bugungi joylangan kinolar', $todayFilms)
-                ->description('Bugun qo\'shilgan kinolar soni')
-                ->descriptionIcon('heroicon-o-calendar')
+            Stat::make('Umumiy yuklab olinishlar', $todayFilms)
+                ->description('Multfilmlarni umumiy yuklab olinishlar soni')
+                ->descriptionIcon('heroicon-o-folder-arrow-down')
                 ->color('warning'),
 
-            Stat::make('Bugungi joylangan istoriyalar', $todayStories)
-                ->description('Bugun qo\'shilgan istoriyalar soni')
-                ->descriptionIcon('heroicon-o-calendar-days')
+            Stat::make('Bugungi yuklab olinishlar', $todayStories)
+                ->description('Bugungi yuklab olingan multfilmlar soni')
+                ->descriptionIcon('heroicon-o-arrow-down-tray')
                 ->color('danger'),
         ];
     }
