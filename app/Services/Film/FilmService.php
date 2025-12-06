@@ -7,6 +7,7 @@ use App\Models\Film;
 use App\Services\Film\Search\FilmSearchService;
 use App\Services\TelegramService;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class FilmService
@@ -75,6 +76,46 @@ class FilmService
       ]) as $adminId
     ) {
       $this->telegram->sendMessage($adminId, $msg);
+    }
+  }
+
+  /**
+   * Track film download - increments download count asynchronously
+   */
+  public function trackDownload(int $filmId): void
+  {
+    try {
+      // Use increment for fast, non-blocking operation
+      DB::table('films')->where('id', $filmId)->increment('downloads');
+    } catch (\Throwable $e) {
+      // Silently fail to not affect user experience
+      Log::debug('Download tracking failed', [
+        'film_id' => $filmId,
+        'error' => $e->getMessage()
+      ]);
+    }
+  }
+
+  /**
+   * Track search query - saves search asynchronously
+   */
+  public function trackSearch(string $query, int $resultsCount, ?string $userChatId = null): void
+  {
+    try {
+      // Use insert for fast, non-blocking operation
+      DB::table('searches')->insert([
+        'query' => $query,
+        'results_count' => $resultsCount,
+        'user_chat_id' => $userChatId,
+        'created_at' => now(),
+        'updated_at' => now(),
+      ]);
+    } catch (\Throwable $e) {
+      // Silently fail to not affect user experience
+      Log::debug('Search tracking failed', [
+        'query' => $query,
+        'error' => $e->getMessage()
+      ]);
     }
   }
 }

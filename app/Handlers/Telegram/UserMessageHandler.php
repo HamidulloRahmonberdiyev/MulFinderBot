@@ -70,6 +70,9 @@ class UserMessageHandler
 
     $films = $this->filmService->search($query);
 
+    // Track search - non-blocking
+    $this->filmService->trackSearch($query, $films->count(), (string) $chatId);
+
     if ($films->isEmpty()) {
       $this->telegram->sendMessage(
         $chatId,
@@ -114,6 +117,9 @@ class UserMessageHandler
 
     sleep(1);
     $this->telegram->copyMessage($chatId, $film->chat_id, $film->message_id);
+
+    // Track download - non-blocking
+    $this->filmService->trackDownload($film->id);
 
     Log::info('✅ Film sent successfully', [
       'film_id' => $film->id,

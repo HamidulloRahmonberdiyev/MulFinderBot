@@ -12,7 +12,8 @@ class Film extends Model
         'message_id',
         'chat_id',
         'file_id',
-        'details'
+        'details',
+        'downloads'
     ];
 
     protected $casts = [

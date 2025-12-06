@@ -103,6 +103,9 @@ class CallbackQueryHandler
     sleep(1);
     $this->telegram->copyMessage($chatId, $film->chat_id, $film->message_id);
 
+    // Track download - non-blocking
+    $this->filmService->trackDownload($film->id);
+
     Log::info('✅ Film sent from callback', [
       'film_id' => $film->id,
       'chat_id' => $chatId

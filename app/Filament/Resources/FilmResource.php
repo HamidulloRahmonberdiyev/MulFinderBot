@@ -77,6 +77,12 @@ class FilmResource extends Resource
                             ->maxLength(255)
                             ->columnSpanFull()
                             ->disabled(),
+
+                        Forms\Components\TextInput::make('downloads')
+                            ->label('Yuklab olishlar')
+                            ->numeric()
+                            ->default(0)
+                            ->disabled(),
                     ])
                     ->columns(2),
             ]);
@@ -178,6 +184,14 @@ class FilmResource extends Resource
                     ->trueColor('success')
                     ->falseColor('gray'),
 
+                Tables\Columns\TextColumn::make('downloads')
+                    ->label('Yuklab olishlar')
+                    ->numeric()
+                    ->sortable()
+                    ->badge()
+                    ->color('success')
+                    ->default(0),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Yaratilgan')
                     ->dateTime('d.m.Y H:i')
@@ -198,6 +212,14 @@ class FilmResource extends Resource
                 Tables\Filters\Filter::make('no_file')
                     ->label('Fayl yo\'q')
                     ->query(fn(Builder $query): Builder => $query->whereNull('file_id')),
+
+                Tables\Filters\Filter::make('has_downloads')
+                    ->label('Yuklab olingan')
+                    ->query(fn(Builder $query): Builder => $query->where('downloads', '>', 0)),
+
+                Tables\Filters\Filter::make('popular')
+                    ->label('Mashhur (10+ yuklab olish)')
+                    ->query(fn(Builder $query): Builder => $query->where('downloads', '>=', 10)),
             ])
             ->actions([
                 ViewAction::make(),
