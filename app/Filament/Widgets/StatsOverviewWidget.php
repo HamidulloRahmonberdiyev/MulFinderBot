@@ -26,9 +26,9 @@ class StatsOverviewWidget extends BaseWidget
                 ->descriptionIcon('heroicon-o-book-open')
                 ->color('info'),
 
-            Stat::make('Umumiy yuklab olinishlar', $todayFilms)
-                ->description('Multfilmlarni umumiy yuklab olinishlar soni')
-                ->descriptionIcon('heroicon-o-folder-arrow-down')
+            Stat::make('Bugungi joylangan kinolar', $todayFilms)
+                ->description('Bugun qo\'shilgan kinolar soni')
+                ->descriptionIcon('heroicon-o-calendar')
                 ->color('warning'),
 
             Stat::make('Bugungi yuklab olinishlar', $todayStories)
