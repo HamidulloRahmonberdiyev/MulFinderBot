@@ -49,6 +49,10 @@ class StoryResource extends Resource
                             ->maxLength(255)
                             ->columnSpanFull(),
 
+                        Forms\Components\Hidden::make('views_count')
+                            ->label('Ko\'rishlar soni')
+                            ->default(1),
+
                         Forms\Components\Textarea::make('content')
                             ->label('Kontent')
                             ->rows(5)

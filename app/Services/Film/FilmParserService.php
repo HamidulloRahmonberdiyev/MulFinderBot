@@ -8,13 +8,9 @@ class FilmParserService
 {
   public function parse(string $caption): array
   {
-    Log::info('🔍 Parsing caption', ['original' => $caption]);
-
     $cleanCaption = $this->removeEmojis($caption);
-    Log::info('🧹 Cleaned caption', ['cleaned' => $cleanCaption]);
 
     $lines = $this->splitIntoLines($cleanCaption);
-    Log::info('📋 Split into lines', ['lines' => $lines, 'count' => count($lines)]);
 
     $title = $this->extractTitle($lines);
     $details = $this->extractDetails($lines);
@@ -59,9 +55,7 @@ class FilmParserService
 
   private function extractTitle(array $lines): ?string
   {
-    if (empty($lines)) {
-      return null;
-    }
+    if (empty($lines)) return null;
 
     $firstLine = reset($lines);
 
@@ -80,6 +74,31 @@ class FilmParserService
       return $title;
     }
 
+    // If no hashtag, try to extract from quotes
+    // Check for various quote types: "", '', «», "", ''
+    $quotePatterns = [
+      '/[\x{201C}\x{201D}"]([^\x{201C}\x{201D}"]+)[\x{201C}\x{201D}"]/u',  // Double quotes: "text" or "text"
+      '/[\x{2018}\x{2019}\']([^\x{2018}\x{2019}\']+)[\x{2018}\x{2019}\']/u', // Single quotes: 'text' or 'text'
+      '/\x{00AB}([^\x{00BB}]+)\x{00BB}/u',  // Guillemets: «text»
+      '/"([^"]+)"/',               // Standard double quotes: "text"
+      '/\'([^\']+)\'/',            // Standard single quotes: 'text'
+    ];
+
+    foreach ($quotePatterns as $pattern) {
+      if (preg_match($pattern, $firstLine, $matches)) {
+        $title = trim($matches[1]);
+
+        if (!empty($title)) {
+          Log::info('🏷️ Title extracted from quote', [
+            'quote' => $matches[0],
+            'title' => $title
+          ]);
+
+          return $title;
+        }
+      }
+    }
+
     return null;
   }
 
@@ -88,9 +107,7 @@ class FilmParserService
     $details = [];
 
     foreach ($lines as $line) {
-      if (str_starts_with($line, '#')) {
-        continue;
-      }
+      if (str_starts_with($line, '#')) continue;
 
       if (str_contains($line, ':')) {
         [$key, $value] = array_map('trim', explode(':', $line, 2));
