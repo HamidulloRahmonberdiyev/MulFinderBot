@@ -54,11 +54,11 @@ class FilmService
   public function search(string $query): Collection
   {
     if (preg_match('/^\d+$/', $query)) {
-      return Film::where('code', 'C' . $query)->limit(10)->get();
+      return Film::where('code', 'C' . $query)->limit(1)->get();
     }
 
     if (preg_match('/^C\d+$/', $query)) {
-      return Film::where('code', $query)->limit(10)->get();
+      return Film::where('code', $query)->limit(1)->get();
     }
 
     return $this->search->search($query)
