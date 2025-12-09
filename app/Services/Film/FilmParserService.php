@@ -59,9 +59,9 @@ class FilmParserService
 
     $firstLine = reset($lines);
 
+    // 1. Avval hashtag bormi tekshirish
     if (preg_match('/#([^\s#\n]+)/', $firstLine, $matches)) {
       $hashtag = $matches[1];
-
       $title = str_replace('_', ' ', $hashtag);
       $title = preg_replace('/\(\d{4}\)/', '', $title);
       $title = trim($title);
@@ -74,28 +74,50 @@ class FilmParserService
       return $title;
     }
 
-    // If no hashtag, try to extract from quotes
-    // Check for various quote types: "", '', «», "", ''
-    $quotePatterns = [
-      '/[\x{201C}\x{201D}"]([^\x{201C}\x{201D}"]+)[\x{201C}\x{201D}"]/u',  // Double quotes: "text" or "text"
-      '/[\x{2018}\x{2019}\']([^\x{2018}\x{2019}\']+)[\x{2018}\x{2019}\']/u', // Single quotes: 'text' or 'text'
-      '/\x{00AB}([^\x{00BB}]+)\x{00BB}/u',  // Guillemets: «text»
-      '/"([^"]+)"/',               // Standard double quotes: "text"
-      '/\'([^\']+)\'/',            // Standard single quotes: 'text'
-    ];
+    // 2. Hashtag bo'lmasa, butun lines massividan quote qidirish
+    foreach ($lines as $line) {
+      $line = trim($line);
+      if (empty($line)) continue;
 
-    foreach ($quotePatterns as $pattern) {
-      if (preg_match($pattern, $firstLine, $matches)) {
-        $title = trim($matches[1]);
+      $quoteLine = preg_replace('/^>\s*/', '', $line);
+      $quoteLine = preg_replace('/^[▸▹►▶]\s*/', '', $quoteLine);
 
-        if (!empty($title)) {
-          Log::info('🏷️ Title extracted from quote', [
-            'quote' => $matches[0],
-            'title' => $title
-          ]);
+      $quotePatterns = [
+        '/^[\x{201C}\x{201D}"](.+?)[\x{201C}\x{201D}"]$/u',  // "text" yoki "text"
+        '/^[\x{2018}\x{2019}\'](.+?)[\x{2018}\x{2019}\']$/u', // 'text' yoki 'text'
+        '/^\x{00AB}(.+?)\x{00BB}$/u',                         // «text»
+        '/^"(.+?)"$/',                                         // "text"
+        '/^\'(.+?)\'$/',                                       // 'text'
+        '/^(.+)$/',                                            // Agar quote belgisi bo'lmasa, butun qatorni ol
+      ];
 
-          return $title;
+      foreach ($quotePatterns as $pattern) {
+        if (preg_match($pattern, $quoteLine, $matches)) {
+          $title = trim($matches[1]);
+
+          if (!empty($title) && strlen($title) > 3) {
+            Log::info('🏷️ Title extracted from quote', [
+              'original_line' => $line,
+              'quote' => $matches[0],
+              'title' => $title
+            ]);
+
+            return $title;
+          }
         }
+      }
+    }
+
+    foreach ($lines as $line) {
+      $cleaned = trim($line);
+      $cleaned = preg_replace('/^[>#▸▹►▶\s]+/', '', $cleaned);
+
+      if (!empty($cleaned) && strlen($cleaned) > 3) {
+        Log::info('🏷️ Title extracted from first non-empty line', [
+          'title' => $cleaned
+        ]);
+
+        return $cleaned;
       }
     }
 
