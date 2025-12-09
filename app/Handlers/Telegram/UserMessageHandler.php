@@ -21,8 +21,21 @@ class UserMessageHandler
       $chatId = $message['chat']['id'];
       $text = $message['text'] ?? '';
 
+      if (str_starts_with($text, '/start')) {
+        $parts = explode(' ', $text, 2);
+        $param = $parts[1] ?? null;
+
+        if ($param) {
+          $param = urldecode($param);
+          $this->handleStartWithParam($chatId, $param);
+          return;
+        }
+
+        $this->handleStart($chatId);
+        return;
+      }
+
       match ($text) {
-        '/start' => $this->handleStart($chatId),
         '🎬 Multfilmlarni Topish' => $this->handleSearchButton($chatId),
         default => $this->handleSearch($chatId, $text)
       };
@@ -46,6 +59,35 @@ class UserMessageHandler
       $this->formatter->welcome(),
       $this->formatter->mainKeyboard()
     );
+  }
+
+  private function handleStartWithParam(int|string $chatId, string $param): void
+  {
+    Log::info('🔗 Start command with parameter', [
+      'chat_id' => $chatId,
+      'param' => $param
+    ]);
+
+    $this->telegram->sendChatAction($chatId, 'typing');
+
+    $films = $this->filmService->search($param);
+
+    if ($films->isEmpty()) {
+      $this->telegram->sendMessage(
+        $chatId,
+        "❌ Film topilmadi. Code: {$param}\n\n" . $this->formatter->welcome(),
+        $this->formatter->mainKeyboard()
+      );
+      return;
+    }
+
+    if ($films->count() === 1) {
+      $this->sendFilm($chatId, $films->first());
+      return;
+    }
+
+    // If multiple films found (shouldn't happen with code, but just in case)
+    $this->sendFilmList($chatId, $films, $param);
   }
 
   private function handleSearchButton(int|string $chatId): void
