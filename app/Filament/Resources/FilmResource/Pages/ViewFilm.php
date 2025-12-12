@@ -46,7 +46,7 @@ class ViewFilm extends ViewRecord
                     }
 
                     $chatId = ltrim($film->chat_id, '-');
-                    $url = "https://t.me/c/{$chatId}/{$film->message_id}";
+                    $url = "https://t.me/cartoons_db/{$film->message_id}";
 
                     return redirect()->away($url);
                 }),
