@@ -23,5 +23,6 @@ Route::prefix('stories')->name('stories.')->group(function () {
 Route::get('search/films', [Searchcontroller::class, 'search'])->name('films.search');
 
 Route::prefix('films')->name('films.')->group(function () {
-    Route::get('/', [FilmController::class, 'index'])->name('index');
+  Route::get('/', [FilmController::class, 'index'])->name('index');
+  Route::get('/{id}', [FilmController::class, 'show'])->name('show');
 });

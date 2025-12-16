@@ -34,4 +34,13 @@ class FilmController extends Controller
             ]
         ]);
     }
+
+    public function show($id)
+    {
+        $film = Film::find($id);
+
+        if (!$film) return $this->errorResponse('Film not found', 404);
+
+        return $this->successResponse($film);
+    }
 }
