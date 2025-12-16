@@ -97,26 +97,13 @@ class FilmSearchService
     Log::info("🔍 Trying transliteration", ['query' => $query]);
     $translit = $this->transliterate($query);
 
-    if ($translit === $query) {
-      Log::info("⏭️ Transliteration same as original, skipping");
-      return new Collection();
-    }
+    if ($translit === $query) return new Collection();
 
-    Log::info("🔄 Transliterated", ['original' => $query, 'transliterated' => $translit]);
     $found = $this->find($translit);
-
-    if ($found->isNotEmpty()) {
-      Log::info("✅ Found by transliteration", ['count' => $found->count()]);
-    } else {
-      Log::info("❌ No results with transliteration");
-    }
 
     return $found;
   }
 
-  /**
-   * Get relevance score from result
-   */
   private function getRelevance($result): float
   {
     if (!$result) return 0;
@@ -136,9 +123,6 @@ class FilmSearchService
     return 0;
   }
 
-  /**
-   * Check if results have high enough relevance (likely exact or close match)
-   */
   private function hasHighRelevance(Collection $results, string $query): bool
   {
     if ($results->isEmpty())  return false;
@@ -201,7 +185,6 @@ class FilmSearchService
           continue;
         }
 
-        // Normalized comparison to avoid skipping valid translations
         $normalizedOriginal = mb_strtolower(trim($query));
         $normalizedTranslated = mb_strtolower(trim($translated));
 
@@ -220,7 +203,6 @@ class FilmSearchService
           'translated' => $translated
         ]);
 
-        // Try searching with translated text directly
         Log::info("🔍 Searching with translated text", ['translated' => $translated]);
         $found = $this->find($translated);
 
@@ -238,7 +220,6 @@ class FilmSearchService
           'translated' => $translated
         ]);
 
-        // Also try transliterating the translated text and searching
         $translitTranslated = $this->transliterate($translated);
 
         if ($translitTranslated !== $translated && $translitTranslated !== $query) {
@@ -289,6 +270,7 @@ class FilmSearchService
     $sql = $this->similarity->buildRelevanceSql($words, $trigrams);
 
     return Film::query()
+      ->sourceType('TELEGRAM')
       ->select('*')
       ->selectRaw("$sql AS relevance", [
         $normalized,

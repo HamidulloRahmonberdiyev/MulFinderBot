@@ -8,12 +8,18 @@ class Film extends Model
 {
     protected $fillable = [
         'title',
+        'description',
+        'source_type',
+        'video_url',
         'code',
         'message_id',
         'chat_id',
         'file_id',
         'details',
-        'downloads'
+        'downloads',
+        'description',
+        'video_url',
+        'source_type'
     ];
 
     protected $casts = [
@@ -26,6 +32,11 @@ class Film extends Model
     {
         return $query->where('title', 'like', "%{$search}%")
             ->orderBy('created_at', 'desc');
+    }
+
+    public function scopeSourceType($query, string $type)
+    {
+        return $query->where('source_type', $type);
     }
 
     public function getFormattedDetails(): string

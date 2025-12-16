@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\FilmController;
 use App\Http\Controllers\Api\Searchcontroller;
 use App\Http\Controllers\Api\StoryController;
 use App\Http\Controllers\Telegram\TelegramWebhookController;
@@ -21,3 +22,6 @@ Route::prefix('stories')->name('stories.')->group(function () {
 
 Route::get('search/films', [Searchcontroller::class, 'search'])->name('films.search');
 
+Route::prefix('films')->name('films.')->group(function () {
+    Route::get('/', [FilmController::class, 'index'])->name('index');
+});

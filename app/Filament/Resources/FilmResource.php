@@ -10,8 +10,11 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms;
+use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -51,38 +54,88 @@ class FilmResource extends Resource
                             ->maxLength(255)
                             ->columnSpanFull(),
 
+                        Forms\Components\ToggleButtons::make('source_type')
+                            ->label('Manba turi')
+                            ->options([
+                                'TELEGRAM' => 'Telegram',
+                                'YOUTUBE' => 'YouTube',
+                                'OKRU' => 'Odnoklassniki',
+                            ])
+                            ->icons([
+                                'TELEGRAM' => 'heroicon-o-paper-airplane',
+                                'YOUTUBE' => 'heroicon-o-play',
+                                'OKRU' => 'heroicon-o-user-group',
+                            ])
+                            ->default('OKRU')
+                            ->required()
+                            ->inline()
+                            ->columnSpanFull()
+                            ->live()
+                            ->afterStateUpdated(fn($state, Set $set) => $set('video_url', null))
+                            ->afterStateUpdated(fn($state, Set $set) => $set('description', null)),
+
+                        Forms\Components\Textarea::make('description')
+                            ->label('Tavsif')
+                            ->rows(4)
+                            ->columnSpanFull(),
+
+                        Forms\Components\TextInput::make('video_url')
+                            ->label('Video URL')
+                            ->url()
+                            ->required()
+                            ->maxLength(500)
+                            ->columnSpanFull()
+                            ->visible(fn(Get $get) => $get('source_type') !== 'TELEGRAM')
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function ($state, Set $set) {
+                                if ($state && str_contains($state, 'ok.ru/video/')) {
+                                    // https://ok.ru/video/7254643968751 -> https://ok.ru/videoembed/7254643968751
+                                    $videoId = basename(parse_url($state, PHP_URL_PATH));
+                                    if ($videoId) {
+                                        $embedUrl = 'https://ok.ru/videoembed/' . $videoId;
+                                        $set('video_url', $embedUrl);
+                                    }
+                                }
+                            }),
+
                         Forms\Components\TextInput::make('code')
                             ->label('Kod')
                             ->maxLength(255)
-                            ->disabled(),
+                            ->disabled()
+                            ->visible(fn(Get $get, $livewire) => $get('source_type') === 'TELEGRAM' && !($livewire instanceof CreateRecord)),
 
                         Forms\Components\KeyValue::make('details')
                             ->label('Tafsilotlar')
                             ->keyLabel('Kalit')
                             ->valueLabel('Qiymat')
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->visible(fn(Get $get, $livewire) => $get('source_type') === 'TELEGRAM' && !($livewire instanceof CreateRecord)),
 
                         Forms\Components\TextInput::make('message_id')
                             ->label('Message ID')
                             ->maxLength(255)
-                            ->disabled(),
+                            ->disabled()
+                            ->visible(fn(Get $get, $livewire) => $get('source_type') === 'TELEGRAM' && !($livewire instanceof CreateRecord)),
 
                         Forms\Components\TextInput::make('chat_id')
                             ->label('Chat ID')
                             ->maxLength(255)
-                            ->disabled(),
+                            ->disabled()
+                            ->visible(fn(Get $get, $livewire) => $get('source_type') === 'TELEGRAM' && !($livewire instanceof CreateRecord)),
 
                         Forms\Components\TextInput::make('file_id')
                             ->label('File ID')
                             ->maxLength(255)
                             ->columnSpanFull()
-                            ->disabled(),
+                            ->disabled()
+                            ->visible(fn(Get $get, $livewire) => $get('source_type') === 'TELEGRAM' && !($livewire instanceof CreateRecord)),
 
                         Forms\Components\TextInput::make('downloads')
                             ->label('Yuklab olishlar')
                             ->numeric()
                             ->default(0)
-                            ->disabled(),
+                            ->disabled()
+                            ->visible(fn(Get $get, $livewire) => $get('source_type') === 'TELEGRAM' && !($livewire instanceof CreateRecord)),
                     ])
                     ->columns(2),
             ]);
@@ -258,6 +311,7 @@ class FilmResource extends Resource
     {
         return [
             'index' => Pages\ListFilms::route('/'),
+            'create' => Pages\CreateFilm::route('/create'),
             'view' => Pages\ViewFilm::route('/{record}'),
             'edit' => Pages\EditFilm::route('/{record}/edit'),
         ];

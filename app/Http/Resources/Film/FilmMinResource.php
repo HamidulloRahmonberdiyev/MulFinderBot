@@ -14,6 +14,7 @@ class FilmMinResource extends JsonResource
             'title' => $this->title,
             'code' => $this->code,
             'details' => $this->details,
+            'source_type' => $this->source_type,
         ];
     }
 }

@@ -44,6 +44,7 @@ class FilmService
   private function generateNextCode(): string
   {
     $maxNumber = Film::whereNotNull('code')
+      ->sourceType('TELEGRAM')
       ->where('code', 'like', 'C%')
       ->selectRaw('MAX(CAST(SUBSTRING(code, 2) AS UNSIGNED)) as max_code')
       ->value('max_code');
@@ -54,15 +55,15 @@ class FilmService
   public function search(string $query): Collection
   {
     if (preg_match('/^\d+$/', $query)) {
-      return Film::where('code', 'C' . $query)->limit(1)->get();
+      return Film::where('code', 'C' . $query)->sourceType('TELEGRAM')->limit(1)->get();
     }
 
     if (preg_match('/^C\d+$/', $query)) {
-      return Film::where('code', $query)->limit(1)->get();
+      return Film::where('code', $query)->sourceType('TELEGRAM')->limit(1)->get();
     }
 
     return $this->search->search($query)
-      ?: Film::whereRaw('1=0')->limit(10)->get();
+      ?: Film::whereRaw('1=0')->sourceType('TELEGRAM')->limit(10)->get();
   }
 
 
